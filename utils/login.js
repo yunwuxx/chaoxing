@@ -48,10 +48,8 @@ export const login = async (uid, pwd) => {
     }).then(data => {
         const res = data.data;
         if(!res || !res.status) {
-            console.log(`${uid}登陆失败`);
             return;
         } else {
-            console.log(`${uid}登陆成功`);
             return data.headers['set-cookie'];
         }
     }).catch(err => {
