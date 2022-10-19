@@ -1,7 +1,10 @@
 import { login } from './utils/login.js'
 import { ClassData, ActivityData, PcCommonCheckIn, PptCheckIn } from './configs/api.js'
 import { users } from './configs/users.js'
+import { workTime } from './utils/workTime.js';
 import axios from 'axios';
+import schedule from 'node-schedule';
+import esMain from 'es-main';
 
 
 if(users.length == 0) {
@@ -176,25 +179,40 @@ class CheckIn {
 }
 
 
-for(let i=0; i<users.length; i++) {
-    const uid = users[i].id, pwd = users[i].pwd;
-    const checkInClass = new CheckIn(uid, pwd);
-    const login = await checkInClass.getCredit();
-    if(!login || !checkInClass.credit || !checkInClass._uid) {
-        console.log(`${uid}登录失败`);
-        continue;
-    } else {
-        console.log(`${uid}登录成功`);
-    }
-    const courses = await checkInClass.getCourseId();
-    console.log(`寻找到${courses.length}门课程。正在寻找签到活动...`)
-    for(let i=0; i<courses.length; i++) {
-        const acts = await checkInClass.getActivities(courses[i][1], courses[i][0]);
-        if(acts.length > 0) {
-            console.log(`在课程${courses[i][1]}中找到${acts.length}项活动。`);
-            for(let i=0; i<acts.length; i++) {
-                await checkInClass.checkActivity(acts[i]);
+const Main = async () => {
+    for(let i=0; i<users.length; i++) {
+        const uid = users[i].id, pwd = users[i].pwd;
+        const checkInClass = new CheckIn(uid, pwd);
+        const login = await checkInClass.getCredit();
+        if(!login || !checkInClass.credit || !checkInClass._uid) {
+            console.log(`${uid}登录失败`);
+            continue;
+        } else {
+            console.log(`${uid}登录成功`);
+        }
+        const courses = await checkInClass.getCourseId();
+        console.log(`寻找到${courses.length}门课程。正在寻找签到活动...`)
+        for(let i=0; i<courses.length; i++) {
+            const acts = await checkInClass.getActivities(courses[i][1], courses[i][0]);
+            if(acts.length > 0) {
+                console.log(`在课程${courses[i][1]}中找到${acts.length}项活动。`);
+                for(let i=0; i<acts.length; i++) {
+                    await checkInClass.checkActivity(acts[i]);
+                }
             }
         }
     }
+}
+
+
+if(esMain(import.meta)) {
+    Main();
+    schedule.scheduleJob('0 */10 * * * *', function() {
+        console.log(new Date())
+        if(workTime()) {
+            console.log('不在签到时段');
+        } else {
+            Main();
+        }
+    })
 }
