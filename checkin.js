@@ -207,9 +207,10 @@ const Main = async () => {
 
 if(esMain(import.meta)) {
     Main();
-    schedule.scheduleJob('0 */10 * * * *', function() {
+    schedule.scheduleJob('0 */10 * * * *', async function() {
         console.log(new Date())
-        if(workTime()) {
+        const isOff = await workTime();
+        if(isOff) {
             console.log('不在签到时段');
         } else {
             Main();
