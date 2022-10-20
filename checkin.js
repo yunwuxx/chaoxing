@@ -2,6 +2,8 @@ import { login } from './utils/login.js'
 import { ClassData, ActivityData, PcCommonCheckIn, PptCheckIn } from './configs/api.js'
 import { users } from './configs/users.js'
 import { workTime } from './utils/workTime.js';
+import { push } from './utils/push.js';
+import { HeartBeat } from './configs/config.js';
 import axios from 'axios';
 import schedule from 'node-schedule';
 import esMain from 'es-main';
@@ -132,6 +134,7 @@ class CheckIn {
                 retry--;
             }
         }
+        await push('签到失败', `一项签到活动失败,请检查`);
         return 2;
     }
 
@@ -194,6 +197,7 @@ const Main = async () => {
         const login = await checkInClass.getCredit();
         if(!login || !checkInClass.credit || !checkInClass._uid) {
             console.log(`${uid}登录失败`);
+            push('登录失败', `${uid}登录失败,请检查`);
             continue;
         } else {
             console.log(`${uid}登录成功`);
@@ -216,6 +220,10 @@ const Main = async () => {
 if(esMain(import.meta)) {
     Main();
     schedule.scheduleJob('0 */10 * * * *', async function() {
+        axios({
+            url: HeartBeat.url,
+            method: HeartBeat.method
+        })
         console.log(new Date())
         const isOff = await workTime();
         if(isOff) {
