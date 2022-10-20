@@ -110,21 +110,29 @@ class CheckIn {
 
 
     checkRequest = async (url, method, paras) => {
-        const req = await axios({
-            url: url,
-            method: method,
-            headers: this.headers,
-            params: paras
-        }).then(data => {
-            return data;
-        }).then(data => {
-            console.log('签到成功。')
-            return data.data;
-        }).catch(err => {
-            console.log('签到失败。')
-            return;
-        })
-        return req ? 1: 2;
+        let retry = 5;
+        while(retry >= 0) {
+            const req = await axios({
+                url: url,
+                method: method,
+                headers: this.headers,
+                params: paras
+            }).then(data => {
+                return data;
+            }).then(data => {
+                console.log('签到成功。')
+                return data.data;
+            }).catch(err => {
+                console.log('签到失败。正在重试...')
+                return;
+            })
+            if(req) {
+                return 1;
+            } else {
+                retry--;
+            }
+        }
+        return 2;
     }
 
 
