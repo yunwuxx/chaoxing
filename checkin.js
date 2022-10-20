@@ -97,7 +97,7 @@ class CheckIn {
             return;
         })
         if(!activitylist || !activitylist.groupList || activitylist.groupList.length == 0 || activitylist.status != 1) {
-            return false;
+            return -1;
         }
         const alist = activitylist.activeList;
         for(let i=0; i<alist.length; i++) {
@@ -192,9 +192,16 @@ class CheckIn {
 
 const Main = async () => {
     for(let i=0; i<users.length; i++) {
+        let retry;
         const uid = users[i].id, pwd = users[i].pwd;
         const checkInClass = new CheckIn(uid, pwd);
-        const login = await checkInClass.getCredit();
+        let login = await checkInClass.getCredit();
+        retry = 5;
+        while((!login || !checkInClass.credit || !checkInClass._uid) && retry >= 0) {
+            console.log(`${uid}登录失败,正在重试...`);
+            login = await checkInClass.getCredit();
+            retry--;
+        }
         if(!login || !checkInClass.credit || !checkInClass._uid) {
             console.log(`${uid}登录失败`);
             push('登录失败', `${uid}登录失败,请检查`);
@@ -202,10 +209,27 @@ const Main = async () => {
         } else {
             console.log(`${uid}登录成功`);
         }
-        const courses = await checkInClass.getCourseId();
+        let courses = await checkInClass.getCourseId();
         console.log(`寻找到${courses.length}门课程。正在寻找签到活动...`)
+        retry = 5;
+        while(courses.length == 0 && retry >= 0) {
+            courses = await checkInClass.getCourseId();
+            retry--;
+        }
+        if(courses.length == 0) {
+            push('没有找到课程', `${uid}没有可获取的课程, 请检查`);
+        }
         for(let i=0; i<courses.length; i++) {
-            const acts = await checkInClass.getActivities(courses[i][1], courses[i][0]);
+            let acts = await checkInClass.getActivities(courses[i][1], courses[i][0]);
+            retry = 5;
+            while(acts == -1 && retry >= 0) {
+                acts = await checkInClass.getActivities(courses[i][1], courses[i][0]);
+                retry--;
+            }
+            if(acts == -1) {
+                push('活动获取失败',`${uid}课程活动获取失败,请检查`);
+                continue;
+            }
             if(acts.length > 0) {
                 console.log(`在课程${courses[i][1]}中找到${acts.length}项活动。`);
                 for(let i=0; i<acts.length; i++) {
