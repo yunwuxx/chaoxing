@@ -243,6 +243,7 @@ const Main = async () => {
 
 if(esMain(import.meta)) {
     Main();
+    console.log('开始定时任务');
     schedule.scheduleJob('0 */10 * * * *', async function() {
         axios({
             url: HeartBeat.url,
@@ -254,6 +255,7 @@ if(esMain(import.meta)) {
             console.log('不在签到时段');
         } else {
             Main();
+            console.log('等待下次任务开始');
         }
     })
 }

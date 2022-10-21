@@ -106,3 +106,4 @@ dist
 
 configs/users.js
 configs/config.js
+data/cookies.json
