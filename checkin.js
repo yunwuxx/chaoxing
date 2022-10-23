@@ -242,19 +242,19 @@ const Main = async () => {
 
 
 if(esMain(import.meta)) {
-    Main();
+    await Main();
     console.log('开始定时任务');
     schedule.scheduleJob('0 */10 * * * *', async function() {
         axios({
             url: HeartBeat.url,
             method: HeartBeat.method
         })
-        console.log(new Date())
+        console.log(new Date());
         const isOff = await workTime();
         if(isOff) {
             console.log('不在签到时段');
         } else {
-            Main();
+            await Main();
             console.log('等待下次任务开始');
         }
     })
