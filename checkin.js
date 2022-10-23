@@ -252,6 +252,9 @@ if(esMain(import.meta)) {
         console.log(new Date());
         const isOff = await workTime();
         if(isOff) {
+            console.log('不在签到时段')
+        }
+        if(false) {
             console.log('不在签到时段');
         } else {
             await Main();
