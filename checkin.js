@@ -7,6 +7,8 @@ import { HeartBeat, defaultLoc } from './configs/config.js';
 import axios from 'axios';
 import schedule from 'node-schedule';
 import esMain from 'es-main';
+import fs from 'fs';
+import https from 'https';
 
 
 if(users.length == 0) {
@@ -174,7 +176,7 @@ class CheckIn {
                 fid: 0,
                 name: ''
             }
-            return this.checkRequest(PptCheckIn.url, PptCheckIn.method, paras);
+            return await this.checkRequest(PptCheckIn.url, PptCheckIn.method, paras);
         }
         if(signPage.indexOf('同意提交位置信息') != -1) {
             const long = defaultLoc.long, lati = defaultLoc.lati; // 先只使用默认值
@@ -193,10 +195,12 @@ class CheckIn {
                 }).then(res => {
                     const result = res;
                     if(!result || !result.weidu_gd || !result.jingdu_gd) {
-                        return [];
+                        return [longitude, latitude];
                     } else {
                         return [result.weidu_gd, result.jingdu_gd];
                     }
+                }).catch(err => {
+                    return [longitude, latitude];
                 })
             }
             const gds = await getLocGd(long, lati);
@@ -213,7 +217,84 @@ class CheckIn {
                 appType: 15,
                 ifTiJiao: 1
             }
-            return this.checkRequest(PptCheckIn.url, PptCheckIn.method, paras);
+            return await this.checkRequest(PptCheckIn.url, PptCheckIn.method, paras);
+        }
+        if(signPage.indexOf('<title>拍照签到</title>') != -1) {
+            // 拍照签到
+            // refer: https://github.com/cxOrz/chaoxing-sign-cli/blob/main/src/functions/photo.ts
+            const getPanToken = async () => {
+                let uf, _d, vc3;
+                const c = this.credit;
+                for(let i=0; i<c.length; i++) {
+                    if(c[i].startsWith('uf')) {
+                        uf = c[i].split('uf=')[1].split(';')[0];
+                    } else if(c[i].startsWith('_d')) {
+                        _d = c[i].split('_d=')[1].split(';')[0];
+                    } else if(c[i].startsWith('vc3')) {
+                        vc3 = c[i].split('vc3=')[1].split(';')[0];
+                    }
+                }
+                if(!uf || !_d || !vc3) {
+                    return -1;
+                }
+                return axios({
+                    url: 'https://pan-yz.chaoxing.com/api/token/uservalid',
+                    method: 'GET',
+                    headers: {
+                        'Cookie': `uf=${uf}; _d=${_d}; UID=${this._uid}; vc3=${vc3};`
+                    }
+                }).then(data => {
+                    return data.data;
+                }).then(res => {
+                    if(!res || !res.result || !res._token) {
+                        return [-1, uf, _d, vc3];
+                    }
+                    return [res._token, uf, _d, vc3];
+                }).catch(err => {
+                    return [-1, uf, _d, vc3];
+                })
+            }
+            const data = await getPanToken();
+            const token = data[0], uf = data[1], _d = data[2], vc3 = data[3]; 
+            const uploadPhoto = async () => {
+                const FormData = (await import('form-data')).default;
+                let form = new FormData();
+                let readStream = fs.createReadStream('./data/black.jpg');
+                form.append('file', readStream);
+                form.append('puid', this._uid);
+                return new Promise((resolve) => {
+                    let data = '';
+                    const _headers = {
+                        'Cookie': `uf=${uf}; _d=${_d}; UID=${this._uid}; vc3=${vc3};`
+                    };
+                    _headers['Content-Type'] = `multipart/form-data;boundary=${form.getBoundary()}`;
+                    let request = https.request('https://pan-yz.chaoxing.com/upload?_token=' + token, {
+                        method: 'POST',
+                        headers: _headers
+                    }, (res) => {
+                      res.on('data', (chunk) => {
+                        data += chunk;
+                      });
+                      res.on('end', () => {
+                        resolve(data);
+                      });
+                    });
+                    form.pipe(request);
+                });
+            }
+            const picObjId = JSON.parse(await uploadPhoto()).objectId;
+            const paras = {
+                activeId: activeid,
+                uid: this._uid,
+                clientip: '',
+                useragent: '',
+                latitude: -1,
+                longitude: -1,
+                appType: 15,
+                fid: 3253,
+                objectId: picObjId ? picObjId : 'a5d588f7bce1994323c348982332e470'
+            }
+            return await this.checkRequest(PptCheckIn.url, PptCheckIn.method, paras);
         }
         if(signPage.indexOf('<title>签到</title>') != -1) {
             // 普通签到
