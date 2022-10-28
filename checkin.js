@@ -3,7 +3,7 @@ import { ClassData, ActivityData, PcCommonCheckIn, PptCheckIn } from './configs/
 import { users } from './configs/users.js'
 import { workTime } from './utils/workTime.js';
 import { push } from './utils/push.js';
-import { HeartBeat } from './configs/config.js';
+import { HeartBeat, defaultLoc } from './configs/config.js';
 import axios from 'axios';
 import schedule from 'node-schedule';
 import esMain from 'es-main';
@@ -176,6 +176,45 @@ class CheckIn {
             }
             return this.checkRequest(PptCheckIn.url, PptCheckIn.method, paras);
         }
+        if(signPage.indexOf('同意提交位置信息') != -1) {
+            const long = defaultLoc.long, lati = defaultLoc.lati; // 先只使用默认值
+            // 位置签到
+            const getLocGd = async (longitude, latitude) => {
+                return axios({
+                    url: 'https://mobilelearn.chaoxing.com/pptSign/mapbd2gd',
+                    method: 'GET',
+                    params: {
+                        longitude,
+                        latitude,
+                        DB_STRATEGY: 'DEFAULT'
+                    }
+                }).then(data => {
+                    return data.data;
+                }).then(res => {
+                    const result = res;
+                    if(!result || !result.weidu_gd || !result.jingdu_gd) {
+                        return [];
+                    } else {
+                        return [result.weidu_gd, result.jingdu_gd];
+                    }
+                })
+            }
+            const gds = await getLocGd(long, lati);
+            const paras = {
+                address: defaultLoc.name,
+                uid: this._uid,
+                clientip: '',
+                activeId: activeid,
+                latitude: lati,
+                longitude: long,
+                latitude_gd: gds[0],
+                longitude_gd: gds[1],
+                fid: 3253,
+                appType: 15,
+                ifTiJiao: 1
+            }
+            return this.checkRequest(PptCheckIn.url, PptCheckIn.method, paras);
+        }
         if(signPage.indexOf('<title>签到</title>') != -1) {
             // 普通签到
             const paras = {
@@ -253,9 +292,6 @@ if(esMain(import.meta)) {
         const isOff = await workTime();
         if(isOff) {
             console.log('不在签到时段')
-        }
-        if(false) {
-            console.log('不在签到时段');
         } else {
             await Main();
             console.log('等待下次任务开始');
