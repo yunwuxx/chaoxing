@@ -10,7 +10,7 @@ export const workTime = async () => {
         return true;
     }
     return axios({
-        url: `https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`,
+        url: `https://jsdelivrproxy.fc.yunwuu.cn/?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2FNateScarlet%2Fholiday-cn%40master%2F${year}.json`,
         timeout: 5000
     }).then(data => {
         return data;
