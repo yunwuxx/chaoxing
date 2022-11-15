@@ -1,5 +1,6 @@
 import axios from 'axios';
 import dayjs from 'dayjs';
+import fs from 'fs';
 
 
 export const workTime = async () => {
@@ -12,6 +13,9 @@ export const workTime = async () => {
     return axios({
         url: `https://jsdelivrproxy.fc.yunwuu.cn/?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2FNateScarlet%2Fholiday-cn%40master%2F${year}.json`,
         timeout: 5000
+    }).catch(err => {
+        console.log('正在使用本地数据...');
+        return fs.readFileSync(`./data/${year}.json`);
     }).then(data => {
         return data;
     }).then(res => {

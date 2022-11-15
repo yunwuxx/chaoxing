@@ -368,6 +368,8 @@ if(esMain(import.meta)) {
         axios({
             url: HeartBeat.url,
             method: HeartBeat.method
+        }).catch(err => {
+            console.log('Heartbeat failed.')
         })
         console.log(new Date());
         const isOff = await workTime();
